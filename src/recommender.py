@@ -38,13 +38,40 @@ class Recommender:
     def __init__(self, songs: List[Song]):
         self.songs = songs
 
+    def _score(self, user: UserProfile, song: Song) -> Tuple[float, List[str]]:
+        """Scores one Song against a UserProfile using the Algorithm Recipe."""
+        score = 0.0
+        reasons = []
+
+        if song.genre == user.favorite_genre:
+            score += 2.0
+            reasons.append("genre match (+2.0)")
+
+        if song.mood == user.favorite_mood:
+            score += 1.0
+            reasons.append("mood match (+1.0)")
+
+        energy_score = 1 - abs(user.target_energy - song.energy)
+        score += energy_score
+        reasons.append(f"energy closeness (+{energy_score:.2f})")
+
+        song_is_acoustic = song.acousticness > 0.5
+        if user.likes_acoustic == song_is_acoustic:
+            score += 0.5
+            reasons.append("acoustic fit (+0.5)")
+
+        return score, reasons
+
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        """Scores every song, sorts by score descending, and returns the top k."""
+        scored = [(song, self._score(user, song)[0]) for song in self.songs]
+        scored.sort(key=lambda item: item[1], reverse=True)
+        return [song for song, _ in scored[:k]]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        """Returns a human-readable reason string for why a song scored as it did."""
+        _, reasons = self._score(user, song)
+        return ", ".join(reasons) if reasons else "No strong matches for this profile."
 
 NUMERIC_FIELDS = ("id", "energy", "tempo_bpm", "valence", "danceability", "acousticness")
 
